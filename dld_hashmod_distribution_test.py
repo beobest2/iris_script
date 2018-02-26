@@ -10,13 +10,16 @@ import API.M6 as M6
 SYS_TABLE_INFO = Default.M6_MASTER_DATA_DIR + "/SYS_TABLE_INFO.DAT"
 
 # API로 쿼리 수행
-def m6_execute(query):
+def m6_execute(query, is_select=False):
     conn = M6.Connection('127.0.0.1:5050', 'test', 'test')
     c = conn.Cursor()
     c.SetFieldSep('|^|')
     c.SetRecordSep('|^-^|')
     print
     print c.Execute2(query)
+    if is_select:
+        for row in c:
+            print row
     c.Close()
     conn.close()
 
@@ -29,8 +32,8 @@ def create_table(db_dot_table):
        a         TEXT
     )
     datascope       LOCAL
-    ramexpire       30
-    diskexpire      34200
+    ramexpire       0
+    diskexpire      3420000
     partitionkey    k
     partitiondate   p
     partitionrange  10
@@ -42,6 +45,11 @@ def create_table(db_dot_table):
 def insert_data(db_dot_table, key, partition, value):
     query = "INSERT INTO %s (k, p, a) VALUES ('%s', '%s', '%s');" % (db_dot_table, key, partition,  value)
     m6_execute(query)
+
+# 데이터 조회
+def select_data(db_dot_table):
+    query = "select * from %s;" % db_dot_table
+    m6_execute(query, is_select=True)
 
 # DELETE TABLE
 def delete_table(db_dot_table):
@@ -128,6 +136,9 @@ def Main():
         print "## insert a row of data / key : %s" % key_loop
         insert_data(db_dot_table, key_loop, partition, value)
         check_dld_dir(table_id)
+        
+        #print "## select inserted data"
+        #select_data(db_dot_table)
         hash_value = hash(table_id + key_loop + partition) % Default.HASH_MOD_VALUE
         print "## hash_value : hash('table_id(%s)' + 'key'(%s) + 'partition'(%s)) %% Default.HASH_MOD_VALUE(%d) ==> %d" % (table_id, 
         key_loop, partition, Default.HASH_MOD_VALUE, hash_value)
